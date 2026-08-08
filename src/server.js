@@ -4,6 +4,8 @@ import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { config, isLoopbackAddress } from "./config.js";
+import { provisionEspTouch } from "./provisioning/esptouch.js";
+import { getCurrentWifiNetwork } from "./provisioning/network-info.js";
 import { SpaController } from "./spa/controller.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -79,7 +81,17 @@ async function handleApi(request, response, pathname) {
       host: config.hostname,
       loopbackOnly: config.loopbackOnly,
       accessTokenRequired: Boolean(config.accessToken),
+      wifiProvisioningSupported: process.platform === "win32",
     });
+    return;
+  }
+  if (request.method === "GET" && pathname === "/api/network") {
+    try {
+      const network = await getCurrentWifiNetwork();
+      sendJson(response, 200, { network });
+    } catch (error) {
+      sendJson(response, 200, { network: null, error: error.message });
+    }
     return;
   }
   if (request.method !== "POST") {
@@ -90,6 +102,86 @@ async function handleApi(request, response, pathname) {
   const body = await readJson(request);
   if (pathname === "/api/discover") {
     sendJson(response, 200, await controller.discover());
+    return;
+  }
+  if (pathname === "/api/provision") {
+    if (!credentialLoginAllowed(request)) {
+      sendJson(response, 403, {
+        error: "Wi-Fi credentials may only be entered from this PC",
+        code: "loopback_required",
+      });
+      return;
+    }
+    if (body.confirmedPanelReady !== true) {
+      sendJson(response, 400, {
+        error: "Confirm that the spa Wi-Fi button was released at the first beep",
+        code: "panel_confirmation_required",
+      });
+      return;
+    }
+
+    const network = await getCurrentWifiNetwork();
+    if (network.state !== "connected" || !network.localAddress) {
+      sendJson(response, 409, {
+        error: "This PC must be connected to the target Wi-Fi network",
+        code: "wifi_not_connected",
+      });
+      return;
+    }
+    if (network.is24Ghz === false) {
+      sendJson(response, 409, {
+        error: "Connect this PC to the router's 2.4 GHz Wi-Fi before provisioning the spa",
+        code: "wifi_band_unsupported",
+      });
+      return;
+    }
+    if (body.ssid && network.ssid && String(body.ssid) !== network.ssid) {
+      sendJson(response, 409, {
+        error: "The entered Wi-Fi name must match the network this PC is currently using",
+        code: "wifi_ssid_mismatch",
+      });
+      return;
+    }
+
+    const input = {
+      ssid: String(body.ssid || network.ssid || ""),
+      password: String(body.password ?? ""),
+      bssid: String(body.bssid || network.bssid || ""),
+      localAddress: network.localAddress,
+    };
+    const attempt = provisionEspTouch(input, { timeoutMs: 60_000 });
+    input.password = "";
+    body.password = "";
+
+    let acknowledgement = null;
+    let provisioningWarning = null;
+    try {
+      acknowledgement = await attempt;
+    } catch (error) {
+      if (error.code !== "provisioning_timeout") throw error;
+      // Windows Firewall may block the acknowledgement even when the device
+      // successfully joins. A subsequent product-key discovery is decisive.
+      provisioningWarning = error.message;
+    }
+
+    const discovery = await controller.discover(
+      acknowledgement?.ip
+        ? { target: acknowledgement.ip, timeoutMs: 6000 }
+        : { timeoutMs: 6000 },
+    );
+    if (!acknowledgement && !discovery.spaFound) {
+      const error = new Error(provisioningWarning);
+      error.statusCode = 504;
+      error.code = "provisioning_timeout";
+      throw error;
+    }
+    sendJson(response, 200, {
+      provisioned: Boolean(acknowledgement || discovery.spaFound),
+      acknowledgement,
+      confirmedCleverSpa: discovery.spaFound,
+      warning: discovery.spaFound ? null : "The Wi-Fi module replied, but its CleverSpa product key is not confirmed yet",
+      status: discovery.status,
+    });
     return;
   }
   if (pathname === "/api/cloud/login") {

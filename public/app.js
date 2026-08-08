@@ -13,8 +13,10 @@
   let spaState = emptyState();
   let pendingTarget = null;
   let requestInFlight = false;
+  let provisionInFlight = false;
   let pollTimer;
   let toastTimer;
+  let provisionTimer;
 
   function emptyState() {
     return {
@@ -224,6 +226,26 @@
     toastTimer = setTimeout(() => { elements.toast.hidden = true; }, 4200);
   }
 
+  function setProvisionStatus(kind, title, detail, { elapsed = false } = {}) {
+    elements.provisionStatus.hidden = false;
+    elements.provisionStatus.className = `provision-status provision-status--${kind}`;
+    elements.provisionStatusTitle.textContent = title;
+    elements.provisionStatusDetail.textContent = detail;
+    elements.provisionProgress.hidden = !elapsed;
+    elements.provisionElapsed.hidden = !elapsed;
+  }
+
+  async function refreshProvisionNetwork() {
+    try {
+      const response = await api("/api/network");
+      const network = response?.network || {};
+      if (network.ssid && !elements.provisionSsid.value) elements.provisionSsid.value = String(network.ssid);
+      if (network.bssid && !elements.provisionBssid.value) elements.provisionBssid.value = String(network.bssid);
+    } catch {
+      // Status polling already exposes authentication or connection problems.
+    }
+  }
+
   async function refreshStatus({ quiet = false } = {}) {
     try {
       const raw = await api("/api/status");
@@ -319,6 +341,84 @@
     }
   });
 
+  elements.provisionForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (provisionInFlight) return;
+
+    const payload = {
+      ssid: elements.provisionSsid.value,
+      password: elements.provisionPassword.value,
+      confirmedPanelReady: elements.provisionPanelReady.checked,
+    };
+    const bssid = elements.provisionBssid.value.trim();
+    if (bssid) payload.bssid = bssid;
+
+    provisionInFlight = true;
+    elements.provisionCard.setAttribute("aria-busy", "true");
+    elements.provisionFields.disabled = true;
+    elements.discoverButton.disabled = true;
+    setProvisionStatus(
+      "working",
+      "Sending Wi-Fi details",
+      "Keep this page open. The V2 panel normally takes 60–90 seconds to reconnect.",
+      { elapsed: true },
+    );
+
+    const startedAt = Date.now();
+    elements.provisionElapsed.textContent = "0 seconds elapsed";
+    clearInterval(provisionTimer);
+    provisionTimer = setInterval(() => {
+      const seconds = Math.floor((Date.now() - startedAt) / 1000);
+      elements.provisionElapsed.textContent = `${seconds} second${seconds === 1 ? "" : "s"} elapsed`;
+    }, 1000);
+
+    // Start the same-origin request, then immediately remove credentials from the page.
+    const provisionRequest = api("/api/provision", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    elements.provisionForm.reset();
+    payload.ssid = "";
+    payload.password = "";
+    payload.confirmedPanelReady = false;
+    delete payload.bssid;
+
+    try {
+      const provisionResult = await provisionRequest;
+      await refreshStatus({ quiet: true });
+      if (provisionResult?.warning) {
+        setProvisionStatus(
+          "warning",
+          "Wi-Fi setup needs confirmation",
+          provisionResult.warning,
+        );
+      } else {
+        setProvisionStatus(
+          "success",
+          "Wi-Fi setup finished",
+          spaState.connected ? "Your spa is online and its status has been refreshed." : "The connection attempt and discovery finished. If the spa is not online yet, wait a moment and try Discover.",
+        );
+      }
+    } catch (error) {
+      setProvisionStatus(
+        "error",
+        "Wi-Fi setup did not finish",
+        `${error.message}. Put the panel into Wi-Fi mode again before retrying.`,
+      );
+    } finally {
+      clearInterval(provisionTimer);
+      provisionInFlight = false;
+      elements.provisionCard.removeAttribute("aria-busy");
+      elements.provisionFields.disabled = false;
+      elements.discoverButton.disabled = false;
+      refreshProvisionNetwork();
+    }
+  });
+
+  elements.provisionAdvanced.addEventListener("toggle", () => {
+    if (elements.provisionAdvanced.open) refreshProvisionNetwork();
+  });
+
   elements.cloudLoginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const username = elements.cloudUsername.value;
@@ -351,6 +451,7 @@
     elements.tokenForm.reset();
     elements.tokenPanel.hidden = true;
     refreshStatus();
+    refreshProvisionNetwork();
   });
 
   document.addEventListener("visibilitychange", () => {
@@ -358,4 +459,5 @@
   });
 
   refreshStatus();
+  refreshProvisionNetwork();
 })();

@@ -136,6 +136,58 @@
           <div><dt>Last contact</dt><dd id="lastContact">—</dd></div>
         </dl>
 
+        <section id="provisionCard" class="provision-card" aria-labelledby="provisionHeading">
+          <div class="provision-card__intro">
+            <span class="provision-card__number" aria-hidden="true">01</span>
+            <div>
+              <p class="eyebrow">V2 Wi-Fi setup</p>
+              <h3 id="provisionHeading">Reconnect the blue-display panel</h3>
+              <p>Hold the physical <strong>Wi-Fi button</strong> and release it at the first beep. The Wi-Fi indicator may change or flash while the panel enters setup mode.</p>
+            </div>
+          </div>
+
+          <div class="provision-card__local-note">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 21s7-3.5 7-9V5l-7-2-7 2v7c0 5.5 7 9 7 9Z"/><path d="m9 12 2 2 4-5"/></svg>
+            <p>Use a <strong>2.4 GHz Wi-Fi network</strong>. These credentials go only to your local Spararama server and are never saved by this app. For safety, setup must be run from the computer hosting Spararama.</p>
+          </div>
+
+          <form id="provisionForm" autocomplete="off">
+            <fieldset id="provisionFields">
+              <label class="readiness-check" for="provisionPanelReady">
+                <input id="provisionPanelReady" name="confirmedPanelReady" type="checkbox" required>
+                <span>I released the physical Wi-Fi button at the first beep.</span>
+              </label>
+
+              <label for="provisionSsid">Wi-Fi network name (SSID)</label>
+              <input id="provisionSsid" name="ssid" type="text" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="off" maxlength="32" required>
+
+              <label for="provisionPassword">Wi-Fi password</label>
+              <input id="provisionPassword" name="password" type="password" autocomplete="off" maxlength="63" required>
+
+              <details id="provisionAdvanced" class="provision-advanced">
+                <summary>Advanced access point details <span>Optional</span></summary>
+                <div>
+                  <label for="provisionBssid">Access point BSSID</label>
+                  <input id="provisionBssid" name="bssid" type="text" inputmode="text" autocapitalize="characters" autocomplete="off" placeholder="AA:BB:CC:DD:EE:FF" aria-describedby="bssidHelp">
+                  <p id="bssidHelp">Usually leave this blank. Spararama will fill it when the local server can identify your access point.</p>
+                </div>
+              </details>
+
+              <button id="provisionButton" class="button button--provision" type="submit">Send Wi-Fi details</button>
+            </fieldset>
+          </form>
+
+          <div id="provisionStatus" class="provision-status" role="status" aria-live="polite" aria-atomic="true" hidden>
+            <div class="provision-status__mark" aria-hidden="true"><span></span></div>
+            <div>
+              <p id="provisionStatusTitle" class="provision-status__title"></p>
+              <p id="provisionStatusDetail" class="provision-status__detail"></p>
+              <progress id="provisionProgress" aria-label="Wi-Fi setup progress"></progress>
+              <p id="provisionElapsed" class="provision-status__elapsed"></p>
+            </div>
+          </div>
+        </section>
+
         <details class="cloud-login">
           <summary>Connect a Gizwits account <span>Optional</span></summary>
           <div class="cloud-login__body">

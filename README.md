@@ -39,10 +39,30 @@ npm.cmd start
 
 Open <http://127.0.0.1:8787> and choose **Find spa**. Discovery is read-only.
 
-If the spa is discovered but reports that a binding window is required, hold
-the physical Wi-Fi button until the spa beeps, then run discovery again. Do not
-factory-reset it: a Gizwits reset erases the saved Wi-Fi credentials and device
-identity.
+### Reconnect a spa whose Wi-Fi is offline
+
+The V2 panel uses the ESPTouch v1 provisioning method selected by the original
+CleverLink application. On the computer running Spararama:
+
+1. Connect to the intended 2.4 GHz home Wi-Fi network.
+2. Open the **Reconnect Wi-Fi** section and enter the network password locally.
+3. Hold the spa's physical Wi-Fi button only until the first beep, then release
+   it immediately. This is the documented pairing action, not a factory reset.
+4. Confirm the panel is ready and start the 60-second provisioning attempt.
+
+The Wi-Fi password is converted into transient UDP packet lengths, then removed
+from the request objects and never logged or written to disk. ESPTouch v1 is an
+old protocol without meaningful over-the-air credential protection, so use it
+only on a trusted home network. A nearby radio observer could potentially
+recover credentials during the short provisioning window.
+
+Windows may ask whether Node.js can receive private-network traffic. Allowing
+private-network UDP is needed for the ESPTouch acknowledgement on port `18266`;
+the app also confirms success independently through Gizwits discovery.
+
+Do not factory-reset the spa: a Gizwits reset erases its saved Wi-Fi credentials
+and device identity. If provisioning times out, release the button and let the
+panel return to normal before retrying.
 
 ## Optional configuration
 

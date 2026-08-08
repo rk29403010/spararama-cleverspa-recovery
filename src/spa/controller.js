@@ -108,8 +108,8 @@ export class SpaController {
     this.#heaterObservedOffSince = null;
   }
 
-  async discover() {
-    const devices = await this.discoverDevices();
+  async discover(options = {}) {
+    const devices = await this.discoverDevices(options);
     this.diagnostics.lastDiscoveryAt = new Date().toISOString();
     this.diagnostics.discoveredDevices = devices;
     const spa = devices.find((device) => device.productKey === CLEVERSPA_PRODUCT_KEY);
