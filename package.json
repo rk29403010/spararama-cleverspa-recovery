@@ -1,0 +1,15 @@
+{
+  "name": "spararama-cleverspa-recovery",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local-first CleverSpa monitoring and control bridge",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "test": "node --test"
+  }
+}

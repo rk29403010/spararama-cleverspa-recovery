@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0d3f42">
+    <meta name="description" content="Local monitoring and control for your CleverSpa.">
+    <title>Spararama</title>
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="icon" href="/icons/spa.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to spa controls</a>
+
+    <header class="site-header">
+      <div>
+        <p class="eyebrow">Your local spa</p>
+        <h1>Spararama</h1>
+      </div>
+      <div id="connectionPill" class="status-pill status-pill--waiting" role="status" aria-live="polite">
+        <span class="status-pill__dot" aria-hidden="true"></span>
+        <span id="connectionLabel">Connecting</span>
+      </div>
+    </header>
+
+    <aside id="tokenPanel" class="token-panel" hidden aria-labelledby="tokenHeading">
+      <div>
+        <h2 id="tokenHeading">LAN access token</h2>
+        <p>This browser needs the token configured on the Spararama server.</p>
+      </div>
+      <form id="tokenForm" class="token-form" autocomplete="off">
+        <label class="sr-only" for="accessToken">Access token</label>
+        <input id="accessToken" name="accessToken" type="password" placeholder="Paste access token" autocomplete="off" required>
+        <button class="button button--compact" type="submit">Use token</button>
+      </form>
+    </aside>
+
+    <main id="main">
+      <section class="temperature-stage" aria-labelledby="temperatureHeading">
+        <div class="temperature-copy">
+          <p id="temperatureHeading" class="section-label">Water temperature</p>
+          <p id="freshness" class="freshness">Waiting for the spa…</p>
+        </div>
+
+        <div class="temperature-orb" aria-live="polite" aria-atomic="true">
+          <div class="temperature-orb__rings" aria-hidden="true"></div>
+          <div class="temperature-orb__face">
+            <span id="currentTemperature" class="temperature-value">--</span>
+            <span class="temperature-unit">°C</span>
+            <span id="temperatureDescription" class="temperature-description">No reading yet</span>
+          </div>
+        </div>
+
+        <div class="target-card">
+          <div>
+            <p class="section-label">Target</p>
+            <p class="target-reading"><span id="targetTemperature">--</span><span>°C</span></p>
+          </div>
+          <div class="target-stepper" aria-label="Set target temperature">
+            <button id="targetDown" class="stepper-button" type="button" aria-label="Reduce target temperature" disabled>−</button>
+            <button id="targetApply" class="button button--target" type="button" disabled>Set <span id="pendingTarget">--</span>°</button>
+            <button id="targetUp" class="stepper-button" type="button" aria-label="Increase target temperature" disabled>+</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="faultPanel" class="fault-panel" role="alert" aria-live="polite" aria-labelledby="faultHeading" hidden>
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3 2.8 20h18.4L12 3Zm0 5.5v5.2m0 3.1v.2"/></svg>
+        <div>
+          <h2 id="faultHeading">Spa needs attention</h2>
+          <ul id="faultList"></ul>
+        </div>
+      </section>
+
+      <section class="controls-section" aria-labelledby="controlsHeading">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Equipment</p>
+            <h2 id="controlsHeading">Spa controls</h2>
+          </div>
+          <span id="controlLock" class="lock-note">Waiting for safe control</span>
+        </div>
+
+        <div class="control-grid">
+          <article class="control-card control-card--heater">
+            <div class="control-icon control-icon--heater" aria-hidden="true">
+              <svg viewBox="0 0 32 32"><path d="M11 25c-4-5 3-7 0-14m8 14c-4-5 3-7 0-14m7 14c-4-5 3-7 0-14"/></svg>
+            </div>
+            <div class="control-card__copy">
+              <h3>Heater</h3>
+              <p id="heaterState">Unavailable</p>
+            </div>
+            <button id="heaterControl" class="switch" type="button" role="switch" aria-checked="false" aria-label="Heater" disabled><span></span></button>
+          </article>
+
+          <article class="control-card">
+            <div class="control-icon" aria-hidden="true">
+              <svg viewBox="0 0 32 32"><path d="M7 10h18M7 16h18M7 22h18M11 7v18m10-18v18"/></svg>
+            </div>
+            <div class="control-card__copy">
+              <h3>Filter</h3>
+              <p id="filterState">Unavailable</p>
+            </div>
+            <button id="filterControl" class="switch" type="button" role="switch" aria-checked="false" aria-label="Filter" disabled><span></span></button>
+          </article>
+
+          <article class="control-card">
+            <div class="control-icon" aria-hidden="true">
+              <svg viewBox="0 0 32 32"><circle cx="10" cy="19" r="3"/><circle cx="19" cy="12" r="4"/><circle cx="23" cy="23" r="2"/></svg>
+            </div>
+            <div class="control-card__copy">
+              <h3>Bubbles</h3>
+              <p id="bubblesState">Unavailable</p>
+            </div>
+            <button id="bubblesControl" class="switch" type="button" role="switch" aria-checked="false" aria-label="Bubbles" disabled><span></span></button>
+          </article>
+        </div>
+      </section>
+
+      <section class="connection-section" aria-labelledby="connectionHeading">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Connection</p>
+            <h2 id="connectionHeading">Find your spa</h2>
+          </div>
+          <button id="discoverButton" class="button button--outline" type="button">Discover</button>
+        </div>
+
+        <p class="panel-note"><span>Panel profile</span> V2 blue-display · 365 Freezeguard</p>
+
+        <dl class="connection-details">
+          <div><dt>Device</dt><dd id="deviceName">Not found</dd></div>
+          <div><dt>Route</dt><dd id="connectionRoute">None</dd></div>
+          <div><dt>Last contact</dt><dd id="lastContact">—</dd></div>
+        </dl>
+
+        <details class="cloud-login">
+          <summary>Connect a Gizwits account <span>Optional</span></summary>
+          <div class="cloud-login__body">
+            <p>If your old spa account still works, it may help locate the device. Credentials go only to this Spararama server and are never saved by this app.</p>
+            <form id="cloudLoginForm" autocomplete="off">
+              <label for="cloudUsername">Email or username</label>
+              <input id="cloudUsername" name="username" type="text" inputmode="email" autocomplete="off" required>
+              <label for="cloudPassword">Password</label>
+              <input id="cloudPassword" name="password" type="password" autocomplete="off" required>
+              <button id="cloudLoginButton" class="button" type="submit">Connect account</button>
+            </form>
+          </div>
+        </details>
+      </section>
+    </main>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <dialog id="heaterDialog" class="confirmation-dialog" aria-labelledby="heaterDialogHeading">
+      <form method="dialog">
+        <div class="confirmation-dialog__mark" aria-hidden="true">≈</div>
+        <h2 id="heaterDialogHeading">Start heating?</h2>
+        <p>Spararama will request filtration and heating. Make sure the spa is filled, uncovered safely, and ready to run.</p>
+        <div class="confirmation-dialog__actions">
+          <button class="button button--outline" value="cancel">Not now</button>
+          <button class="button button--heat" value="confirm">Start heater</button>
+        </div>
+      </form>
+    </dialog>
+  </body>
+</html>
