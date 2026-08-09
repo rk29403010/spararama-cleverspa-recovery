@@ -50,11 +50,16 @@ CleverLink application. On the computer running Spararama:
    it immediately. This is the documented pairing action, not a factory reset.
 4. Confirm the panel is ready and start the 60-second provisioning attempt.
 
-The Wi-Fi password is converted into transient UDP packet lengths, then removed
-from the request objects and never logged or written to disk. ESPTouch v1 is an
-old protocol without meaningful over-the-air credential protection, so use it
-only on a trusted home network. A nearby radio observer could potentially
-recover credentials during the short provisioning window.
+The password field includes a Show/Hide control. By default, the Wi-Fi password
+is converted into transient UDP packet lengths, removed from request objects,
+and never logged or written to disk. If **Save this Wi-Fi password securely on
+this PC** is selected, it is encrypted with Windows DPAPI for the current
+Windows user and stored under the ignored `data/` directory. The encrypted
+secret is never returned to the browser; leaving the field blank reuses it.
+
+ESPTouch v1 is an old protocol without meaningful over-the-air credential
+protection, so use it only on a trusted home network. A nearby radio observer
+could potentially recover credentials during the short provisioning window.
 
 Windows may ask whether Node.js can receive private-network traffic. Allowing
 private-network UDP is needed for the ESPTouch acknowledgement on port `18266`;

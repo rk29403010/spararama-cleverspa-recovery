@@ -14,6 +14,8 @@
   let pendingTarget = null;
   let requestInFlight = false;
   let provisionInFlight = false;
+  let savedPasswordAvailable = false;
+  let savedPasswordChoiceTouched = false;
   let pollTimer;
   let toastTimer;
   let provisionTimer;
@@ -235,12 +237,40 @@
     elements.provisionElapsed.hidden = !elapsed;
   }
 
+  function setPasswordVisibility(visible) {
+    elements.provisionPassword.type = visible ? "text" : "password";
+    elements.passwordVisibilityButton.setAttribute("aria-pressed", String(visible));
+    elements.passwordVisibilityButton.textContent = visible ? "Hide" : "Show";
+  }
+
+  function updateSavedPasswordControls() {
+    const useSavedPassword = savedPasswordAvailable && elements.saveWifiPassword.checked;
+    elements.savedPasswordState.hidden = !savedPasswordAvailable;
+    elements.provisionPassword.required = !useSavedPassword;
+    elements.provisionPassword.placeholder = useSavedPassword
+      ? "Saved password will be used"
+      : "Enter Wi-Fi password";
+
+    if (savedPasswordAvailable && elements.saveWifiPassword.checked) {
+      elements.savePasswordHelp.textContent = "Leave the password blank to use the saved one, or type a replacement to update it.";
+    } else if (savedPasswordAvailable) {
+      elements.savePasswordHelp.textContent = "Enter the Wi-Fi password. The saved copy will be removed after setup.";
+    } else if (elements.saveWifiPassword.checked) {
+      elements.savePasswordHelp.textContent = "The password will be encrypted for your Windows account on this PC.";
+    } else {
+      elements.savePasswordHelp.textContent = "The password will be used once and not saved.";
+    }
+  }
+
   async function refreshProvisionNetwork() {
     try {
       const response = await api("/api/network");
       const network = response?.network || {};
+      savedPasswordAvailable = response?.savedPasswordAvailable === true;
+      if (!savedPasswordChoiceTouched) elements.saveWifiPassword.checked = savedPasswordAvailable;
       if (network.ssid && !elements.provisionSsid.value) elements.provisionSsid.value = String(network.ssid);
       if (network.bssid && !elements.provisionBssid.value) elements.provisionBssid.value = String(network.bssid);
+      updateSavedPasswordControls();
     } catch {
       // Status polling already exposes authentication or connection problems.
     }
@@ -349,6 +379,7 @@
       ssid: elements.provisionSsid.value,
       password: elements.provisionPassword.value,
       confirmedPanelReady: elements.provisionPanelReady.checked,
+      savePassword: elements.saveWifiPassword.checked,
     };
     const bssid = elements.provisionBssid.value.trim();
     if (bssid) payload.bssid = bssid;
@@ -378,9 +409,12 @@
       body: JSON.stringify(payload),
     });
     elements.provisionForm.reset();
+    setPasswordVisibility(false);
+    updateSavedPasswordControls();
     payload.ssid = "";
     payload.password = "";
     payload.confirmedPanelReady = false;
+    payload.savePassword = false;
     delete payload.bssid;
 
     try {
@@ -411,12 +445,22 @@
       elements.provisionCard.removeAttribute("aria-busy");
       elements.provisionFields.disabled = false;
       elements.discoverButton.disabled = false;
+      savedPasswordChoiceTouched = false;
       refreshProvisionNetwork();
     }
   });
 
   elements.provisionAdvanced.addEventListener("toggle", () => {
     if (elements.provisionAdvanced.open) refreshProvisionNetwork();
+  });
+
+  elements.passwordVisibilityButton.addEventListener("click", () => {
+    setPasswordVisibility(elements.provisionPassword.type === "password");
+  });
+
+  elements.saveWifiPassword.addEventListener("change", () => {
+    savedPasswordChoiceTouched = true;
+    updateSavedPasswordControls();
   });
 
   elements.cloudLoginForm.addEventListener("submit", async (event) => {

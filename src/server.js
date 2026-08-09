@@ -4,13 +4,15 @@ import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { config, isLoopbackAddress } from "./config.js";
-import { provisionEspTouch } from "./provisioning/esptouch.js";
+import { WifiCredentialStore } from "./credentials/wifi-credential-store.js";
+import { provisionEspTouch, validateProvisioningInput } from "./provisioning/esptouch.js";
 import { getCurrentWifiNetwork } from "./provisioning/network-info.js";
 import { SpaController } from "./spa/controller.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const publicRoot = path.join(root, "public");
 const controller = new SpaController();
+const wifiCredentialStore = new WifiCredentialStore();
 
 const MIME_TYPES = {
   ".css": "text/css; charset=utf-8",
@@ -88,7 +90,14 @@ async function handleApi(request, response, pathname) {
   if (request.method === "GET" && pathname === "/api/network") {
     try {
       const network = await getCurrentWifiNetwork();
-      sendJson(response, 200, { network });
+      let savedPasswordAvailable = false;
+      let credentialStorageError = null;
+      try {
+        savedPasswordAvailable = Boolean(network.ssid && await wifiCredentialStore.has(network.ssid));
+      } catch (error) {
+        credentialStorageError = error.message;
+      }
+      sendJson(response, 200, { network, savedPasswordAvailable, credentialStorageError });
     } catch (error) {
       sendJson(response, 200, { network: null, error: error.message });
     }
@@ -143,15 +152,41 @@ async function handleApi(request, response, pathname) {
       return;
     }
 
+    const ssid = String(body.ssid || network.ssid || "");
+    const savePassword = body.savePassword === true;
+    let providedPassword = String(body.password ?? "");
+    body.password = "";
+    const savedPasswordAvailable = await wifiCredentialStore.has(ssid);
+    let effectivePassword = providedPassword;
+    if (!effectivePassword && savePassword && savedPasswordAvailable) {
+      effectivePassword = await wifiCredentialStore.load(ssid) || "";
+    }
+    if (!effectivePassword) {
+      sendJson(response, 400, {
+        error: "Enter the Wi-Fi password, or select the saved password for this network",
+        code: "wifi_password_required",
+      });
+      return;
+    }
+
     const input = {
-      ssid: String(body.ssid || network.ssid || ""),
-      password: String(body.password ?? ""),
+      ssid,
+      password: effectivePassword,
       bssid: String(body.bssid || network.bssid || ""),
       localAddress: network.localAddress,
     };
+    const validated = validateProvisioningInput(input);
+    validated.passwordBytes.fill(0);
+    if (savePassword && providedPassword) {
+      await wifiCredentialStore.save(ssid, providedPassword);
+    } else if (!savePassword && savedPasswordAvailable) {
+      await wifiCredentialStore.clear(ssid);
+    }
+    providedPassword = "";
+    effectivePassword = "";
+
     const attempt = provisionEspTouch(input, { timeoutMs: 60_000 });
     input.password = "";
-    body.password = "";
 
     let acknowledgement = null;
     let provisioningWarning = null;
@@ -177,6 +212,7 @@ async function handleApi(request, response, pathname) {
     }
     sendJson(response, 200, {
       provisioned: Boolean(acknowledgement || discovery.spaFound),
+      passwordSaved: savePassword,
       acknowledgement,
       confirmedCleverSpa: discovery.spaFound,
       warning: discovery.spaFound ? null : "The Wi-Fi module replied, but its CleverSpa product key is not confirmed yet",

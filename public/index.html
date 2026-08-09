@@ -148,7 +148,7 @@
 
           <div class="provision-card__local-note">
             <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 21s7-3.5 7-9V5l-7-2-7 2v7c0 5.5 7 9 7 9Z"/><path d="m9 12 2 2 4-5"/></svg>
-            <p>Use a <strong>2.4 GHz Wi-Fi network</strong>. These credentials go only to your local Spararama server and are never saved by this app. For safety, setup must be run from the computer hosting Spararama.</p>
+            <p>Use a <strong>2.4 GHz Wi-Fi network</strong>. Credentials go only to your local Spararama server and are kept only when you explicitly choose secure saving below. For safety, setup must be run from the computer hosting Spararama.</p>
           </div>
 
           <form id="provisionForm" autocomplete="off">
@@ -162,7 +162,20 @@
               <input id="provisionSsid" name="ssid" type="text" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="off" maxlength="32" required>
 
               <label for="provisionPassword">Wi-Fi password</label>
-              <input id="provisionPassword" name="password" type="password" autocomplete="off" maxlength="63" required>
+              <p id="savedPasswordState" class="saved-password-state" role="status" hidden>
+                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 11V8a5 5 0 0 1 10 0v3"/><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M12 15v2"/></svg>
+                Saved password available on this PC
+              </p>
+              <div class="password-field">
+                <input id="provisionPassword" name="password" type="password" autocomplete="off" maxlength="63" required>
+                <button id="passwordVisibilityButton" class="password-visibility" type="button" aria-pressed="false" aria-controls="provisionPassword">Show</button>
+              </div>
+
+              <label class="save-password-check" for="saveWifiPassword">
+                <input id="saveWifiPassword" name="savePassword" type="checkbox" aria-describedby="savePasswordHelp">
+                <span>Save this Wi-Fi password securely on this PC</span>
+              </label>
+              <p id="savePasswordHelp" class="save-password-help">The password will be used once and not saved.</p>
 
               <details id="provisionAdvanced" class="provision-advanced">
                 <summary>Advanced access point details <span>Optional</span></summary>
