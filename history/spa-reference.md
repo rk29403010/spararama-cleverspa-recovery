@@ -8,6 +8,10 @@
 - Normal use: potentially daily, usually evening
 - Slow-release chlorine: floating doser
 - Practical dosing amounts should be given in **whole grams**. The household scales do not measure fractional grams.
+- Also give a **metric measuring-spoon equivalent** for every dry chemical dose, rounded to a sensible spoon measure. Assume level spoons unless stated otherwise.
+- Metric spoons in use include 1 tablespoon, 1/2 tablespoon, 1 teaspoon and smaller measures.
+- Spoon measures are practical volume approximations because bulk density varies by chemical/granule size. Keep the gram dose as the reference value and improve the spoon conversion if a product-specific calibration becomes available.
+- Never use a spoon contaminated with one spa chemical in another chemical container. Prefer separate labelled dry spoons, or wash and dry completely between products.
 
 ## Current chemicals
 
